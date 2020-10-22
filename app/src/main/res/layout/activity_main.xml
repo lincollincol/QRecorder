@@ -7,11 +7,20 @@
     tools:context=".MainActivity">
 
     <Button
+        android:id="@+id/decode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Decode"
+        android:layout_centerVertical="true"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true" />
+
+    <Button
         android:id="@+id/start"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="start"
-        android:layout_centerVertical="true"
+        android:layout_below="@+id/decode"
         android:layout_alignParentStart="true"
         android:layout_alignParentEnd="true" />
 

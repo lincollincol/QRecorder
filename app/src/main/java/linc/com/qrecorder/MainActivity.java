@@ -8,6 +8,7 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -18,6 +19,10 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
 import static linc.com.qrecorder.Constants.MEDIA_PROJECTION_REQUEST_CODE;
 import static linc.com.qrecorder.Constants.*;
 
@@ -25,8 +30,8 @@ public class MainActivity extends AppCompatActivity {
 
     private Button start;
     private Button stop;
+    private Button decode;
     private MediaProjectionManager mediaProjectionManager;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,13 +39,20 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
 //        Mp3Encoder.init("/storage/emulated/0/Music/rec.pcm", 1, 64000, 22000, "/storage/emulated/0/Music/out.mp3");
-        Mp3Encoder.init("/storage/emulated/0/Android/data/linc.com.qrecorder/files/AudioCaptures/1603204084515.pcm", 1, 64000, 22000, "/storage/emulated/0/Music/out.mp3");
-        Mp3Encoder.encode();
-        Mp3Encoder.destroy();
 
+//        QRecorderTileService.requestListeningState(this, ComponentName.createRelative(this, "QRecorder"));
 
-
+        decode = findViewById(R.id.decode);
         start = findViewById(R.id.start);
+        stop = findViewById(R.id.stop);
+
+        decode.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                decodeCapture();
+            }
+        });
+
         start.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -48,14 +60,23 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        stop = findViewById(R.id.stop);
         stop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 stopCapturing();
             }
         });
+
     }
+
+    private void decodeCapture() {
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.US);
+        Mp3Encoder.init("/storage/emulated/0/Music/1.pcm", 1, 64000, 22000, "/storage/emulated/0/Music/" + df.format(new Date(System.currentTimeMillis())) + ".mp3");
+        Mp3Encoder.encode();
+        Mp3Encoder.destroy();
+        System.out.println("DECODED");
+    }
+
 
     private void setButtonsEnabled(boolean isCapturingAudio) {
         start.setEnabled(!isCapturingAudio);
@@ -72,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void stopCapturing() {
         setButtonsEnabled(false);
-        Intent serviceIntent = new Intent(this, RecorderService.class);
+        Intent serviceIntent = new Intent(getApplicationContext(), RecorderService.class);
         serviceIntent.setAction(ACTION_STOP);
         startService(serviceIntent);
     }
@@ -90,7 +111,8 @@ public class MainActivity extends AppCompatActivity {
                 new String[] {
                         Manifest.permission.RECORD_AUDIO,
                         Manifest.permission.READ_EXTERNAL_STORAGE,
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                        Manifest.permission.MODIFY_AUDIO_SETTINGS
                 },
                 RECORD_AUDIO_PERMISSION_REQUEST_CODE
         );
