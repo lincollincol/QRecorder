@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">QRecorder</string>
+    <string name="output_directory">Output Directory</string>
 </resources>

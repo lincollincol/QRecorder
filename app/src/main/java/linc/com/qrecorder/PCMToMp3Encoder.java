@@ -4,7 +4,7 @@ package linc.com.qrecorder;
  * Created by rangaofei on 2018/4/24.
  */
 
-public class Mp3Encoder {
+public class PCMToMp3Encoder {
     static {
         System.loadLibrary("Mp3Codec");
     }

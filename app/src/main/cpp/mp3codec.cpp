@@ -8,9 +8,9 @@
 mp3file_encoder *encoder;
 extern "C"
 JNIEXPORT jint JNICALL
-Java_linc_com_qrecorder_Mp3Encoder_init(JNIEnv *env, jclass type, jstring pcmFilePath_,
-                                  jint audioChannels, jint bitRate, jint sampleRate,
-                                  jstring mp3FilePath_) {
+Java_linc_com_qrecorder_PCMToMp3Encoder_init(JNIEnv *env, jclass type, jstring pcmFilePath_,
+                                             jint audioChannels, jint bitRate, jint sampleRate,
+                                             jstring mp3FilePath_) {
     const char *pcmFilePath = env->GetStringUTFChars(pcmFilePath_, 0);
     const char *mp3FilePath = env->GetStringUTFChars(mp3FilePath_, 0);
     SAKA_LOG_DEBUG("pcm=%s", pcmFilePath);
@@ -24,13 +24,13 @@ Java_linc_com_qrecorder_Mp3Encoder_init(JNIEnv *env, jclass type, jstring pcmFil
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_linc_com_qrecorder_Mp3Encoder_encode(JNIEnv *env, jclass type) {
+Java_linc_com_qrecorder_PCMToMp3Encoder_encode(JNIEnv *env, jclass type) {
 
     encoder->Encode();
 
 }extern "C"
 JNIEXPORT void JNICALL
-Java_linc_com_qrecorder_Mp3Encoder_destroy(JNIEnv *env, jclass type) {
+Java_linc_com_qrecorder_PCMToMp3Encoder_destroy(JNIEnv *env, jclass type) {
 
     encoder->Destroy();
 

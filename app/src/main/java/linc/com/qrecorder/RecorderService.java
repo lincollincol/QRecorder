@@ -113,11 +113,6 @@ public class RecorderService extends Service {
 
         audioRecord = new AudioRecord.Builder()
                 .setAudioFormat(audioFormat)
-                // For optimal performance, the buffer size
-                // can be optionally specified to store audio samples.
-                // If the value is not specified,
-                // uses a single frame and lets the
-                // native code figure out the minimum buffer size.
                 .setBufferSizeInBytes(BUFFER_SIZE_IN_BYTES)
                 .setAudioPlaybackCaptureConfig(config)
                 .build();

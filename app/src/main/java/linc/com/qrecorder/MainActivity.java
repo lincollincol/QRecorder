@@ -8,29 +8,30 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.app.Activity;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.projection.MediaProjectionManager;
 import android.os.Bundle;
-import android.view.View;
-import android.widget.Button;
+import android.os.Environment;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-import static linc.com.qrecorder.Constants.MEDIA_PROJECTION_REQUEST_CODE;
+import static linc.com.qrecorder.Constants.CAPTURE_MEDIA_PROJECTION_REQUEST_CODE;
 import static linc.com.qrecorder.Constants.*;
 
 public class MainActivity extends AppCompatActivity {
 
-    private Button start;
-    private Button stop;
-    private Button decode;
+    private TextView outputPath;
+    private FloatingActionButton record;
+    private FloatingActionButton play;
+
     private MediaProjectionManager mediaProjectionManager;
 
     @Override
@@ -38,49 +39,60 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-//        Mp3Encoder.init("/storage/emulated/0/Music/rec.pcm", 1, 64000, 22000, "/storage/emulated/0/Music/out.mp3");
-
-//        QRecorderTileService.requestListeningState(this, ComponentName.createRelative(this, "QRecorder"));
-
-        decode = findViewById(R.id.decode);
-        start = findViewById(R.id.start);
-        stop = findViewById(R.id.stop);
-
-        decode.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                decodeCapture();
-            }
+        outputPath = findViewById(R.id.outputDirectory);
+        record = findViewById(R.id.record);
+        play = findViewById(R.id.play);
+        record.setOnClickListener(view -> startCapturing());
+        play.setOnClickListener(view -> stopCapturing());
+        outputPath.setOnClickListener(view -> {
+            Intent i = new Intent(this, DirectoryPickerActivity.class);
+            startActivityForResult(i, SELECT_OUTPUT_DIRECTORY_REQUEST_CODE);
         });
+        setButtonsEnabled(false);
+        updateOutputDirectory();
+    }
 
-        start.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                startCapturing();
-            }
-        });
-
-        stop.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                stopCapturing();
-            }
-        });
-
+    private void updateOutputDirectory() {
+        String outputDirectory = getSharedPreferences(PREFERENCES_APP_NAME, MODE_PRIVATE)
+                .getString(PREFERENCES_KEY_OUTPUT_DIRECTORY, "");
+        if(outputDirectory == null || outputDirectory.isEmpty())
+            outputPath.setText(String.format(
+                    FORMAT_OUTPUT_DIRECTORY,
+                    getString(R.string.app_name),
+                    TITLE_DEFAULT_DIRECTORY
+            ));
+        else {
+            String[] directories = outputDirectory.split("/");
+            outputPath.setText(String.format(
+                    FORMAT_OUTPUT_DIRECTORY,
+                    directories[1],
+                    directories[directories.length - 1]
+            ));
+        }
     }
 
     private void decodeCapture() {
-        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss", Locale.US);
-        Mp3Encoder.init("/storage/emulated/0/Music/1.pcm", 1, 64000, 22000, "/storage/emulated/0/Music/" + df.format(new Date(System.currentTimeMillis())) + ".mp3");
-        Mp3Encoder.encode();
-        Mp3Encoder.destroy();
-        System.out.println("DECODED");
+        String outputDirectory = getSharedPreferences(PREFERENCES_APP_NAME, MODE_PRIVATE)
+                .getString(PREFERENCES_KEY_OUTPUT_DIRECTORY, "");
+        if(outputDirectory == null || outputDirectory.isEmpty()) {
+            outputDirectory = ContextCompat.getExternalFilesDirs(this, Environment.DIRECTORY_MUSIC)[0].toString();
+        }
+        SimpleDateFormat df = new SimpleDateFormat(FORMAT_DATE_FULL, Locale.US);
+        PCMToMp3Encoder.init(
+                String.format(FORMAT_RECORDING_ENCODED, outputDirectory, RECORDING_DEFAULT_NAME),
+                DECODE_CHANNELS_COUNT,
+                DECODE_BIT_RATE,
+                DECODE_SAMPLE_RATE,
+                String.format(FORMAT_RECORDING_DECODED, outputDirectory, df.format(new Date(System.currentTimeMillis())))
+        );
+        PCMToMp3Encoder.encode();
+        PCMToMp3Encoder.destroy();
     }
 
 
     private void setButtonsEnabled(boolean isCapturingAudio) {
-        start.setEnabled(!isCapturingAudio);
-        stop.setEnabled(isCapturingAudio);
+        play.setEnabled(!isCapturingAudio);
+        record.setEnabled(isCapturingAudio);
     }
 
     private void startCapturing() {
@@ -96,6 +108,7 @@ public class MainActivity extends AppCompatActivity {
         Intent serviceIntent = new Intent(getApplicationContext(), RecorderService.class);
         serviceIntent.setAction(ACTION_STOP);
         startService(serviceIntent);
+        decodeCapture();
     }
 
     private boolean isRecordAudioPermissionGranted() {
@@ -106,8 +119,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void requestRecordAudioPermission() {
-        ActivityCompat.requestPermissions(
-                this,
+        ActivityCompat.requestPermissions(this,
                 new String[] {
                         Manifest.permission.RECORD_AUDIO,
                         Manifest.permission.READ_EXTERNAL_STORAGE,
@@ -123,44 +135,34 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == RECORD_AUDIO_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(
-                        this,
+                Toast.makeText(this,
                         "Permissions to capture audio granted. Click the button once again.",
                         Toast.LENGTH_SHORT
                 ).show();
             } else {
-                Toast.makeText(
-                        this, "Permissions to capture audio denied.",
+                Toast.makeText(this,
+                        "Permissions to capture audio denied.",
                         Toast.LENGTH_SHORT
                 ).show();
             }
         }
     }
 
-    /**
-     * Before a capture session can be started, the capturing app must
-     * call MediaProjectionManager.createScreenCaptureIntent().
-     * This will display a dialog to the user, who must tap "Start now" in order for a
-     * capturing session to be started. This will allow both video and audio to be captured.
-     */
     private void startMediaProjectionRequest() {
-        // use applicationContext to avoid memory leak on Android 10.
-        // see: https://partnerissuetracker.corp.google.com/issues/139732252
         mediaProjectionManager = (MediaProjectionManager) getApplication()
                 .getSystemService(Context.MEDIA_PROJECTION_SERVICE);
         startActivityForResult(
                 mediaProjectionManager.createScreenCaptureIntent(),
-                MEDIA_PROJECTION_REQUEST_CODE
+                CAPTURE_MEDIA_PROJECTION_REQUEST_CODE
         );
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == MEDIA_PROJECTION_REQUEST_CODE) {
+        if (requestCode == CAPTURE_MEDIA_PROJECTION_REQUEST_CODE) {
             if (resultCode == Activity.RESULT_OK) {
-                Toast.makeText(
-                        this,
+                Toast.makeText(this,
                         "MediaProjection permission obtained. Foreground service will be started to capture audio.",
                         Toast.LENGTH_SHORT
                 ).show();
@@ -171,11 +173,17 @@ public class MainActivity extends AppCompatActivity {
                 startForegroundService(audioCaptureIntent);
                 setButtonsEnabled(true);
             } else {
-                Toast.makeText(
-                        this, "Request to obtain MediaProjection denied.",
+                Toast.makeText(this,
+                        "Request to obtain MediaProjection denied.",
                         Toast.LENGTH_SHORT
                 ).show();
             }
+        } else if(requestCode == SELECT_OUTPUT_DIRECTORY_REQUEST_CODE) {
+            getSharedPreferences(PREFERENCES_APP_NAME, MODE_PRIVATE)
+                    .edit()
+                    .putString(PREFERENCES_KEY_OUTPUT_DIRECTORY, data.getData().toString())
+                    .apply();
+            updateOutputDirectory();
         }
     }
 
