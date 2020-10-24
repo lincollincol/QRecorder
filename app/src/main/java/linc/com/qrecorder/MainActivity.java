@@ -14,11 +14,13 @@ import android.content.pm.PackageManager;
 import android.media.projection.MediaProjectionManager;
 import android.os.Bundle;
 import android.os.Environment;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -26,29 +28,30 @@ import java.util.Locale;
 import static linc.com.qrecorder.Constants.CAPTURE_MEDIA_PROJECTION_REQUEST_CODE;
 import static linc.com.qrecorder.Constants.*;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private TextView outputPath;
     private FloatingActionButton record;
     private FloatingActionButton play;
 
     private MediaProjectionManager mediaProjectionManager;
+    private PlayerManager playerManager;
+    private boolean recording = false;
+    private boolean playing = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        playerManager = new PlayerManager();
         outputPath = findViewById(R.id.outputDirectory);
         record = findViewById(R.id.record);
         play = findViewById(R.id.play);
-        record.setOnClickListener(view -> startCapturing());
-        play.setOnClickListener(view -> stopCapturing());
-        outputPath.setOnClickListener(view -> {
-            Intent i = new Intent(this, DirectoryPickerActivity.class);
-            startActivityForResult(i, SELECT_OUTPUT_DIRECTORY_REQUEST_CODE);
-        });
-        setButtonsEnabled(false);
+        record.setOnClickListener(this);
+        play.setOnClickListener(this);
+        outputPath.setOnClickListener(this);
+
         updateOutputDirectory();
     }
 
@@ -78,21 +81,21 @@ public class MainActivity extends AppCompatActivity {
             outputDirectory = ContextCompat.getExternalFilesDirs(this, Environment.DIRECTORY_MUSIC)[0].toString();
         }
         SimpleDateFormat df = new SimpleDateFormat(FORMAT_DATE_FULL, Locale.US);
+        String decodedRecording = String.format(
+                FORMAT_RECORDING_DECODED,
+                outputDirectory,
+                df.format(new Date(System.currentTimeMillis()))
+        );
         PCMToMp3Encoder.init(
                 String.format(FORMAT_RECORDING_ENCODED, outputDirectory, RECORDING_DEFAULT_NAME),
                 DECODE_CHANNELS_COUNT,
                 DECODE_BIT_RATE,
                 DECODE_SAMPLE_RATE,
-                String.format(FORMAT_RECORDING_DECODED, outputDirectory, df.format(new Date(System.currentTimeMillis())))
+                decodedRecording
         );
         PCMToMp3Encoder.encode();
         PCMToMp3Encoder.destroy();
-    }
-
-
-    private void setButtonsEnabled(boolean isCapturingAudio) {
-        play.setEnabled(!isCapturingAudio);
-        record.setEnabled(isCapturingAudio);
+        playerManager.setAudio(decodedRecording);
     }
 
     private void startCapturing() {
@@ -104,7 +107,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void stopCapturing() {
-        setButtonsEnabled(false);
         Intent serviceIntent = new Intent(getApplicationContext(), RecorderService.class);
         serviceIntent.setAction(ACTION_STOP);
         startService(serviceIntent);
@@ -171,7 +173,6 @@ public class MainActivity extends AppCompatActivity {
                 audioCaptureIntent.setAction(ACTION_START);
                 audioCaptureIntent.putExtra(EXTRA_RESULT_DATA, data);
                 startForegroundService(audioCaptureIntent);
-                setButtonsEnabled(true);
             } else {
                 Toast.makeText(this,
                         "Request to obtain MediaProjection denied.",
@@ -187,4 +188,48 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onClick(View view) {
+        switch (view.getId()) {
+            case R.id.outputDirectory: {
+                Intent i = new Intent(this, DirectoryPickerActivity.class);
+                startActivityForResult(i, SELECT_OUTPUT_DIRECTORY_REQUEST_CODE);
+                break;
+            }
+            case R.id.record: {
+                if(recording) {
+                    stopCapturing();
+                    record.setImageResource(R.drawable.ic_start_recording);
+                } else {
+                    startCapturing();
+                    record.setImageResource(R.drawable.ic_stop_recording);
+                }
+                recording = !recording;
+                break;
+            }
+            case R.id.play: {
+                if(playing) {
+                    playerManager.pausePlayer();
+                    play.setImageResource(R.drawable.ic_play);
+                    playing = !playing;
+                } else {
+                    try {
+                        playerManager.resumePlaying(this, () -> {
+                            play.setImageResource(R.drawable.ic_play);
+                            playing = !playing;
+                        });
+                        play.setImageResource(R.drawable.ic_pause);
+                        playing = !playing;
+                    } catch (NullPointerException npe) {
+                        Toast.makeText(this,
+                                "Record something and then - start player!",
+                                Toast.LENGTH_SHORT
+                        ).show();
+                        npe.printStackTrace();
+                    }
+                }
+                break;
+            }
+        }
+    }
 }

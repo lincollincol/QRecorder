@@ -11,8 +11,8 @@ public final class Constants {
     public static final int BUFFER_SIZE_IN_BYTES = NUM_SAMPLES_PER_READ * BYTES_PER_SAMPLE;
 
     public static final int DECODE_SAMPLE_RATE = 22000;
-    public static final int DECODE_BIT_RATE = 64000;
-    public static final int DECODE_CHANNELS_COUNT = 1;
+    public static final int DECODE_BIT_RATE = 128000;
+    public static final int DECODE_CHANNELS_COUNT = 2;
 
     public static final String ACTION_START = "AudioCaptureService:Start";
     public static final String ACTION_STOP = "AudioCaptureService:Stop";
@@ -25,7 +25,7 @@ public final class Constants {
     public static final String PREFERENCES_APP_NAME = "q_recorder";
     public static final String PREFERENCES_KEY_OUTPUT_DIRECTORY = "q_recorder";
 
-    public static final String FORMAT_DATE_FULL = "yyyy-MM-dd hh:mm:ss";
+    public static final String FORMAT_DATE_FULL = "hh_mm_ss";
     public static final String FORMAT_RECORDING_ENCODED = "%s/%s.pcm";
     public static final String FORMAT_RECORDING_DECODED = "%s/%s.mp3";
     public static final String FORMAT_OUTPUT_DIRECTORY = "%s/.../%s";

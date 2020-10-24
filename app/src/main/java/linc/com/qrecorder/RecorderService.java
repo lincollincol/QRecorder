@@ -14,11 +14,14 @@ import android.content.Intent;
 import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioPlaybackCaptureConfiguration;
+import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -94,7 +97,7 @@ public class RecorderService extends Service {
     private void startAudioCapture() {
 //        AudioAttributes.USAGE_VOICE_COMMUNICATION
         AudioPlaybackCaptureConfiguration config = new AudioPlaybackCaptureConfiguration.Builder(mediaProjection)
-                .addMatchingUsage(AudioAttributes.USAGE_MEDIA) // TODO provide UI options for inclusion/exclusion
+                .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
                 .addMatchingUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
                 .addMatchingUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION_SIGNALLING)
                 .addMatchingUsage(AudioAttributes.USAGE_GAME)
@@ -134,12 +137,21 @@ public class RecorderService extends Service {
     }
 
     private File createAudioFile() {
-        File audioCapturesDirectory = new File("/storage/emulated/0/Music");
+        String outputDirectory = getSharedPreferences(PREFERENCES_APP_NAME, MODE_PRIVATE)
+                .getString(PREFERENCES_KEY_OUTPUT_DIRECTORY, "");
+        if(outputDirectory == null || outputDirectory.isEmpty()) {
+            outputDirectory = ContextCompat.getExternalFilesDirs(this, Environment.DIRECTORY_MUSIC)[0].toString();
+        }
+
+        File audioCapturesDirectory = new File(outputDirectory);
         if (!audioCapturesDirectory.exists()) {
             audioCapturesDirectory.mkdirs();
         }
-        String fileName = "1.pcm";
-        return new File(audioCapturesDirectory.getAbsolutePath() + "/" + fileName);
+        return new File(String.format(
+                FORMAT_RECORDING_ENCODED,
+                audioCapturesDirectory.getAbsolutePath(),
+                RECORDING_DEFAULT_NAME
+        ));
     }
 
     private void writeAudioToFile(File outputFile) throws IOException {
