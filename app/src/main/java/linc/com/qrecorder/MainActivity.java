@@ -182,7 +182,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         } else if(requestCode == SELECT_OUTPUT_DIRECTORY_REQUEST_CODE) {
             getSharedPreferences(PREFERENCES_APP_NAME, MODE_PRIVATE)
                     .edit()
-                    .putString(PREFERENCES_KEY_OUTPUT_DIRECTORY, data.getData().toString())
+                    .putString(PREFERENCES_KEY_OUTPUT_DIRECTORY, data == null ? "" : data.getData().toString())
                     .apply();
             updateOutputDirectory();
         }
